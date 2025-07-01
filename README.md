@@ -1,6 +1,14 @@
 # Renewable Energy Portfolio Dashboard
 
-A comprehensive Streamlit dashboard for visualizing and exploring renewable energy generation, pricing, and revenue data across multiple sites with full data access capabilities.
+A comprehensive Streamlit dashboard for visualizing and exploring renewable energy generation, pricing, and revenue data across multiple sites. Features automatic site detection, full data access capabilities, and no coding required to add new sites.
+
+## 🌟 Key Highlights
+- **Plug & Play**: Add new sites by simply creating folders - dashboard updates automatically
+- **Zero Configuration**: No code changes, no config files, no database updates needed
+- **Complete Visualization Suite**: Monthly, daily, and hourly analysis with statistical insights
+- **Data Access**: View and download any data file directly from the dashboard
+- **Dual Pricing Support**: Handles both real-time and day-ahead pricing data
+- **Scalable**: Add unlimited sites following the same simple process
 
 ## 🚀 Quick Start
 
@@ -28,8 +36,9 @@ A comprehensive Streamlit dashboard for visualizing and exploring renewable ener
 
 ## 📊 Features
 
-### Visualization Capabilities
+### Core Capabilities
 
+- **🔄 Automatic Site Detection**: Simply add new sites to the folder structure - no code changes needed!
 - **📈 Monthly Forecasts**: View monthly trends for generation, price, and revenue with confidence bands
 - **📊 Daily Trends**: Analyze daily patterns with 7-day rolling averages
 - **🕐 Hourly Profiles**: Examine average hourly patterns for generation and pricing
@@ -42,6 +51,7 @@ A comprehensive Streamlit dashboard for visualizing and exploring renewable ener
 ### Data Management Features (NEW!)
 
 - **📁 Data Explorer**: Browse and access all CSV files organized by metric type
+- **🔄 Automatic Site Addition**: Add new sites by creating folders - zero code changes required
 - **👁️ Data Preview**: View any CSV file directly in the dashboard with scrollable tables
 - **💾 Direct Downloads**: Download any data file with a single click
 - **📋 Summary Statistics**: Quick statistical overview of each metric including:
@@ -190,6 +200,132 @@ def load_large_file(filepath):
 - **Duration Curves**: Show how often prices exceed certain thresholds
 - **Distribution Plots**: Display the spread and likelihood of different values
 
+## ➕ Adding New Sites
+
+> **🎉 Good News!** Adding new sites is completely automatic. No programming, no configuration files, no database updates. Just follow the folder structure and the dashboard does the rest!
+
+### Quick Guide - Add a Site in 30 Seconds:
+1. Create folder: `Renewable Portfolio LLC/Your_Site_Name/`
+2. Add subfolders: `Generation/`, `Price/`, `Revenue/`
+3. Drop in your CSV files
+4. Refresh the dashboard - Done! ✅
+
+### Automatic Site Detection
+The dashboard **automatically detects and includes new sites** without any code changes! Simply follow these steps:
+
+**No configuration files, no database updates, no code modifications needed!** The dashboard scans the `Renewable Portfolio LLC` folder on startup and includes any properly structured site folders.
+
+### Step 1: Create Site Folder Structure
+```bash
+Renewable Portfolio LLC/
+└── Your_New_Site_Name/
+    ├── Generation/
+    ├── Price/
+    ├── Price_da/  (optional)
+    └── Revenue/
+```
+
+### Step 2: Add Your Data Files
+Place your CSV files in the appropriate folders following the naming conventions:
+
+#### Generation Folder
+- `{site_name}_generation_hourly_timeseries.csv`
+- `{site_name}_generation_daily_timeseries.csv`
+- `{site_name}_generation_monthly_timeseries.csv`
+- `{site_name}_generation_hourly_stats.csv`
+- `{site_name}_generation_daily_stats.csv`
+- `{site_name}_generation_monthly_stats.csv`
+
+#### Price Folder
+- `{site_name}_price_hourly_timeseries_compressed.csv`
+- `{site_name}_price_daily_timeseries.csv`
+- `{site_name}_price_monthly_timeseries.csv`
+- `{site_name}_price_hourly_stats.csv`
+- `{site_name}_price_daily_stats.csv`
+- `{site_name}_price_monthly_stats.csv`
+
+#### Price_da Folder (optional)
+- Same structure as Price folder with `price_da` in filenames
+
+#### Revenue Folder
+- Same structure as Generation folder with `revenue` in filenames
+
+### Step 3: Push to Git with LFS
+```bash
+# Track large files with Git LFS
+git lfs track "Renewable Portfolio LLC/Your_New_Site_Name/**/*.csv"
+
+# Add and commit
+git add "Renewable Portfolio LLC/Your_New_Site_Name/"
+git commit -m "Add new site: Your_New_Site_Name"
+git push
+```
+
+### Step 4: Refresh Dashboard
+- If running locally: Simply restart the Streamlit app
+- If deployed: The new site will appear after the next deployment or refresh
+
+### 🎯 That's It! The Dashboard Will:
+- ✅ Automatically detect the new site in the sidebar dropdown
+- ✅ Generate all visualizations based on available data
+- ✅ Include the site in the Data Explorer
+- ✅ Handle missing metrics gracefully (e.g., if no Price_da folder exists)
+
+### How Automatic Detection Works
+```
+Renewable Portfolio LLC/
+├── Existing_Site_1/          ← Already in dashboard
+├── Existing_Site_2/          ← Already in dashboard
+└── Your_New_Site/            ← Automatically detected on next run!
+    ├── Generation/           ← Dashboard checks for these folders
+    ├── Price/               ← At least one must exist
+    ├── Price_da/            ← Optional
+    └── Revenue/             ← Optional
+```
+
+### Example: Adding "Desert_Solar_Farm"
+```bash
+# 1. Create folders
+mkdir -p "Renewable Portfolio LLC/Desert_Solar_Farm"/{Generation,Price,Price_da,Revenue}
+
+# 2. Copy your CSV files to appropriate folders
+cp desert_solar_generation_*.csv "Renewable Portfolio LLC/Desert_Solar_Farm/Generation/"
+cp desert_solar_price_*.csv "Renewable Portfolio LLC/Desert_Solar_Farm/Price/"
+cp desert_solar_revenue_*.csv "Renewable Portfolio LLC/Desert_Solar_Farm/Revenue/"
+
+# 3. Track with Git LFS and push
+git lfs track "Renewable Portfolio LLC/Desert_Solar_Farm/**/*.csv"
+git add .
+git commit -m "Add Desert Solar Farm site"
+git push
+```
+
+### Naming Best Practices
+- Use underscores for spaces in folder names: `Wind_Farm_Alpha`
+- Keep site names consistent across all files
+- Avoid special characters except underscores
+- The dashboard will automatically clean names for display (e.g., `Wind_Farm_Alpha` → "Wind Farm Alpha")
+
+### Partial Data Support
+The dashboard gracefully handles incomplete data:
+- Missing metrics (e.g., no Revenue folder) won't break the dashboard
+- Missing temporal resolutions (e.g., no hourly data) will only affect those specific views
+- Sites with only Generation data will still show Generation visualizations
+
+### Troubleshooting New Sites
+
+**New site not appearing in dropdown?**
+- Ensure at least one metric folder (Generation/Price/Revenue) exists
+- Check folder spelling and structure matches exactly
+- Verify CSV files exist in at least one metric folder
+- Restart the Streamlit app (locally) or redeploy (cloud)
+- Run `git lfs pull` to ensure all files are downloaded
+
+**Visualizations missing for new site?**
+- Check file naming conventions match pattern: `{site_name}_{metric}_{temporal}_{type}.csv`
+- Ensure CSV files have required columns (month, day, hour, year columns)
+- Verify data types (year columns should be numeric)
+
 ## 🐛 Troubleshooting
 
 ### Common Issues
@@ -225,6 +361,9 @@ def load_large_file(filepath):
 - **Access Control**: Implement authentication if deploying publicly
 - **File Uploads**: Dashboard reads only from the specified directory structure
 
+## 📝 License
+
+[Your License Here]
 
 ## 🤝 Contributing
 
@@ -233,6 +372,23 @@ def load_large_file(filepath):
 3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
 4. Push to the branch (`git push origin feature/AmazingFeature`)
 5. Open a Pull Request
+
+## ❓ Frequently Asked Questions
+
+**Q: Do I need to modify the code to add a new site?**  
+A: No! Just create the folder structure and add your CSV files. The dashboard automatically detects new sites.
+
+**Q: How many sites can the dashboard handle?**  
+A: There's no hard limit. Performance depends on your data size and deployment resources.
+
+**Q: Can I have different metrics for different sites?**  
+A: Yes! Each site can have any combination of Generation, Price, Price_da, and Revenue data.
+
+**Q: What if my site names have spaces?**  
+A: Use underscores in folder names (e.g., `Solar_Farm_One`). The dashboard automatically formats them nicely for display.
+
+**Q: Can I remove a site?**  
+A: Yes, simply remove or rename the site's folder. The dashboard updates automatically on the next run.
 
 ## 📞 Support
 
