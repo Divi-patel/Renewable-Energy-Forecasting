@@ -6,6 +6,8 @@ import numpy as np
 import warnings
 from scipy import stats
 from scipy.stats import gaussian_kde
+import io
+import base64
 warnings.filterwarnings('ignore')
 
 # Set page config
@@ -140,6 +142,66 @@ class StreamlitEnergyDashboard:
                 return files[0]
         
         return None
+    
+    def get_all_files_for_site(self, site_name):
+        """Get all CSV files for a specific site organized by metric and type"""
+        project_folder = self.portfolio_path / site_name
+        if not project_folder.exists():
+            return {}
+        
+        files_dict = {}
+        
+        # Check each metric folder
+        for metric in ['generation', 'price', 'price_da', 'revenue']:
+            metric_folder_name = metric.capitalize() if metric != 'price_da' else 'Price_da'
+            metric_folder = project_folder / metric_folder_name
+            
+            if metric_folder.exists():
+                files_dict[metric] = {
+                    'timeseries': {},
+                    'stats': {},
+                    'other': []
+                }
+                
+                # Get all CSV files in the metric folder
+                csv_files = list(metric_folder.glob('*.csv'))
+                
+                for file in csv_files:
+                    file_name = file.name.lower()
+                    
+                    # Categorize files
+                    if 'hourly' in file_name:
+                        if 'timeseries' in file_name:
+                            files_dict[metric]['timeseries']['hourly'] = file
+                        elif 'stats' in file_name:
+                            files_dict[metric]['stats']['hourly'] = file
+                        else:
+                            files_dict[metric]['other'].append(file)
+                    elif 'daily' in file_name:
+                        if 'timeseries' in file_name:
+                            files_dict[metric]['timeseries']['daily'] = file
+                        elif 'stats' in file_name:
+                            files_dict[metric]['stats']['daily'] = file
+                        else:
+                            files_dict[metric]['other'].append(file)
+                    elif 'monthly' in file_name:
+                        if 'timeseries' in file_name:
+                            files_dict[metric]['timeseries']['monthly'] = file
+                        elif 'stats' in file_name:
+                            files_dict[metric]['stats']['monthly'] = file
+                        else:
+                            files_dict[metric]['other'].append(file)
+                    else:
+                        files_dict[metric]['other'].append(file)
+        
+        return files_dict
+    
+    def get_download_link(self, df, filename):
+        """Generate a download link for a dataframe"""
+        csv = df.to_csv(index=False)
+        b64 = base64.b64encode(csv.encode()).decode()
+        href = f'<a href="data:file/csv;base64,{b64}" download="{filename}">Download {filename}</a>'
+        return href
     
     def plot_monthly_forecast(self, site_name, metric_type):
         """Create monthly forecast plot"""
@@ -1142,12 +1204,13 @@ def main():
             st.write(display_name.get(metric, metric))
     
     # Main content area
-    tab1, tab2, tab3, tab4, tab5 = st.tabs([
+    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
         "📈 Monthly Forecasts", 
         "📊 Daily Trends", 
         "🕐 Hourly Profiles", 
         "📉 Special Analysis",
-        "🎯 Combined View"
+        "🎯 Combined View",
+        "📁 Data Explorer"
     ])
     
     with tab1:
@@ -1316,6 +1379,159 @@ def main():
                 plt.close()
             else:
                 st.warning("Not enough metrics available for combined view (need at least 2)")
+    
+    with tab6:
+        st.header("📁 Data Explorer & Downloads")
+        
+        # Get all files for the selected site
+        files_dict = dashboard.get_all_files_for_site(selected_site)
+        
+        if not files_dict:
+            st.warning("No data files found for this site")
+        else:
+            # Create tabs for each metric
+            metric_tabs = []
+            metric_names = []
+            
+            for metric in ['generation', 'price', 'price_da', 'revenue']:
+                if metric in files_dict and files_dict[metric]:
+                    metric_tabs.append(metric)
+                    display_name = {
+                        'generation': '⚡ Generation',
+                        'price': '💰 Real-Time Price',
+                        'price_da': '📅 Day-Ahead Price',
+                        'revenue': '💵 Revenue'
+                    }
+                    metric_names.append(display_name.get(metric, metric))
+            
+            if metric_tabs:
+                tabs = st.tabs(metric_names)
+                
+                for idx, (metric, tab) in enumerate(zip(metric_tabs, tabs)):
+                    with tab:
+                        st.subheader(f"{metric_names[idx]} Data Files")
+                        
+                        # Timeseries files
+                        if files_dict[metric]['timeseries']:
+                            st.write("**📈 Timeseries Files:**")
+                            for temporal, file_path in files_dict[metric]['timeseries'].items():
+                                col1, col2, col3 = st.columns([3, 1, 1])
+                                
+                                with col1:
+                                    st.write(f"• {temporal.capitalize()}: `{file_path.name}`")
+                                
+                                with col2:
+                                    if st.button(f"View", key=f"view_{metric}_{temporal}_ts"):
+                                        try:
+                                            df = pd.read_csv(file_path)
+                                            st.write(f"**{file_path.name}** - Shape: {df.shape}")
+                                            st.dataframe(df.head(100), use_container_width=True)
+                                        except Exception as e:
+                                            st.error(f"Error reading file: {e}")
+                                
+                                with col3:
+                                    try:
+                                        df = pd.read_csv(file_path)
+                                        csv = df.to_csv(index=False)
+                                        st.download_button(
+                                            label="Download",
+                                            data=csv,
+                                            file_name=file_path.name,
+                                            mime='text/csv',
+                                            key=f"dl_{metric}_{temporal}_ts"
+                                        )
+                                    except:
+                                        st.button("Download", disabled=True, key=f"dl_disabled_{metric}_{temporal}_ts")
+                        
+                        # Stats files
+                        if files_dict[metric]['stats']:
+                            st.write("\n**📊 Statistics Files:**")
+                            for temporal, file_path in files_dict[metric]['stats'].items():
+                                col1, col2, col3 = st.columns([3, 1, 1])
+                                
+                                with col1:
+                                    st.write(f"• {temporal.capitalize()}: `{file_path.name}`")
+                                
+                                with col2:
+                                    if st.button(f"View", key=f"view_{metric}_{temporal}_stats"):
+                                        try:
+                                            df = pd.read_csv(file_path)
+                                            st.write(f"**{file_path.name}** - Shape: {df.shape}")
+                                            st.dataframe(df.head(100), use_container_width=True)
+                                        except Exception as e:
+                                            st.error(f"Error reading file: {e}")
+                                
+                                with col3:
+                                    try:
+                                        df = pd.read_csv(file_path)
+                                        csv = df.to_csv(index=False)
+                                        st.download_button(
+                                            label="Download",
+                                            data=csv,
+                                            file_name=file_path.name,
+                                            mime='text/csv',
+                                            key=f"dl_{metric}_{temporal}_stats"
+                                        )
+                                    except:
+                                        st.button("Download", disabled=True, key=f"dl_disabled_{metric}_{temporal}_stats")
+                        
+                        # Other files
+                        if files_dict[metric]['other']:
+                            st.write("\n**📄 Other Files:**")
+                            for file_path in files_dict[metric]['other']:
+                                col1, col2, col3 = st.columns([3, 1, 1])
+                                
+                                with col1:
+                                    st.write(f"• `{file_path.name}`")
+                                
+                                with col2:
+                                    if st.button(f"View", key=f"view_{metric}_{file_path.name}"):
+                                        try:
+                                            df = pd.read_csv(file_path)
+                                            st.write(f"**{file_path.name}** - Shape: {df.shape}")
+                                            st.dataframe(df.head(100), use_container_width=True)
+                                        except Exception as e:
+                                            st.error(f"Error reading file: {e}")
+                                
+                                with col3:
+                                    try:
+                                        df = pd.read_csv(file_path)
+                                        csv = df.to_csv(index=False)
+                                        st.download_button(
+                                            label="Download",
+                                            data=csv,
+                                            file_name=file_path.name,
+                                            mime='text/csv',
+                                            key=f"dl_{metric}_{file_path.name}"
+                                        )
+                                    except:
+                                        st.button("Download", disabled=True, key=f"dl_disabled_{metric}_{file_path.name}")
+                        
+                        # Summary statistics for the metric
+                        st.markdown("---")
+                        if st.checkbox(f"Show {metric} data summary", key=f"summary_{metric}"):
+                            st.write("**📋 Data Summary:**")
+                            
+                            # Try to load monthly timeseries for summary
+                            if 'monthly' in files_dict[metric]['timeseries']:
+                                try:
+                                    df = pd.read_csv(files_dict[metric]['timeseries']['monthly'])
+                                    year_cols = [col for col in df.columns if str(col).isdigit()]
+                                    
+                                    if year_cols:
+                                        summary_stats = {
+                                            'Years available': len(year_cols),
+                                            'First year': min(year_cols),
+                                            'Last year': max(year_cols),
+                                            'Annual mean': df[year_cols].sum().mean(),
+                                            'Annual std': df[year_cols].sum().std(),
+                                            'Annual min': df[year_cols].sum().min(),
+                                            'Annual max': df[year_cols].sum().max()
+                                        }
+                                        
+                                        st.write(pd.DataFrame([summary_stats]).T.rename(columns={0: 'Value'}))
+                                except:
+                                    st.info("Could not generate summary statistics")
     
     # Footer
     st.markdown("---")
