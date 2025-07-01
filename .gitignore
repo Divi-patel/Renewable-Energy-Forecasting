@@ -1,0 +1,13 @@
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# Python
+__pycache__/
+*.py[cod]
+.env
+
+# Temporary
+*.tmp
+*.bak
+.DS_Store
