@@ -1,0 +1,2 @@
+asset,hours,start_date,end_date,avg_generation_mw,avg_price,avg_price_da,min_price,max_price,min_price_da,max_price_da,total_revenue,avg_revenue_per_hour,negative_price_hours,negative_price_pct,negative_price_da_hours,negative_price_da_pct
+Blue_Wing_Solar_Energy_Generator,115115,2012-03-01,2025-04-30 23:00:00,2.506593493463059,29.415484515484515,31.433057717560505,-165.83,988.58,-27.74,999.04,10532695.589800002,91.49716014246624,1507,1.309125656951744,80,0.06949572166963472
